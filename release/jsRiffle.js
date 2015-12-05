@@ -9524,7 +9524,7 @@ if (WebSocket) ws.prototype = WebSocket.prototype;
 },{}],62:[function(require,module,exports){
 module.exports={
   "name": "jsriffle",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "description": "Riffle allows applications to connect over a fabric",
   "main": "index.js",
   "browser": {
@@ -9710,6 +9710,7 @@ _transports.register("rawsocket", rawsocket.Factory);
 exports.transports = _transports;
 
 },{"./transport/longpoll.js":78,"./transport/rawsocket.js":79,"./transport/websocket.js":80}],66:[function(require,module,exports){
+(function (global){
 ///////////////////////////////////////////////////////////////////////////////
 //
 //  AutobahnJS - http://autobahn.ws, http://wamp.ws
@@ -9731,52 +9732,50 @@ var log = require('./log.js');
 var riffle = require('./riffle.js');
 
 
-var Connection = function (domain) {
+var Connection = function (domain, options) {
 
    var self = this;
-   self._options = {};
-   self._domain = domain
+   self._options = options || {};
+   self._domain = domain;
 
    // Deferred factory
    //
-   // if (options && options.use_es6_promises) {
+   if (options && options.use_es6_promises) {
 
-   //    if ('Promise' in global) {
-   //       // ES6-based deferred factory
-   //       //
-   //       self._defer = function () {
-   //          var deferred = {};
+      if ('Promise' in global) {
+         // ES6-based deferred factory
+         //
+         self._defer = function () {
+            var deferred = {};
 
-   //          deferred.promise = new Promise(function (resolve, reject) {
-   //             deferred.resolve = resolve;
-   //             deferred.reject = reject;
-   //          });
+            deferred.promise = new Promise(function (resolve, reject) {
+               deferred.resolve = resolve;
+               deferred.reject = reject;
+            });
 
-   //          return deferred;
-   //       };
-   //    } else {
+            return deferred;
+         };
+      } else {
 
-   //       log.debug("Warning: ES6 promises requested, but not found! Falling back to whenjs.");
+         log.debug("Warning: ES6 promises requested, but not found! Falling back to whenjs.");
 
-   //       // whenjs-based deferred factory
-   //       //
-   //       self._defer = when.defer;
-   //    }
+         // whenjs-based deferred factory
+         //
+         self._defer = when.defer;
+      }
 
-   // } else if (options && options.use_deferred) {
+   } else if (options && options.use_deferred) {
 
-   //    // use explicit deferred factory, e.g. jQuery.Deferred or Q.defer
-   //    //
-   //    self._defer = options.use_deferred;
+      // use explicit deferred factory, e.g. jQuery.Deferred or Q.defer
+      //
+      self._defer = options.use_deferred;
 
-   // } else {
+   } else {
 
-   //    // whenjs-based deferred factory
-   //    //
-   //    self._defer = when.defer;
-   // }
-
-   self._defer = when.defer;
+      // whenjs-based deferred factory
+      //
+      self._defer = when.defer;
+   }
 
    // WAMP transport
    //
@@ -10216,17 +10215,18 @@ function flattenHash(hash) {
 
 // Introduction of domain object. Wraps one connection and offers multiple levels of 
 // indirection for interacting with remote domains
-var Domain = function (name) {
+var Domain = function (name, options) {
     this.domain = name;
     this.connection = null;
     this.session = null;
     this.pool = [this];
     this.joined = false;
+    this.options = options;
 }; 
 
 // Does not check the validity of the incoming or final name
 Domain.prototype.subdomain = function(name) {
-   var child = new Domain(this.domain + '.' + name)
+   var child = new Domain(this.domain + '.' + name, this.options)
 
    // If already connected instantly trigger the domain's handler
    if (this.joined) {
@@ -10246,7 +10246,7 @@ Domain.prototype.subdomain = function(name) {
 // Joins and leaves
 Domain.prototype.join = function() {
    var self = this;
-   self.connection = new riffle.Connection(self.domain);
+   self.connection = new riffle.Connection(self.domain, self.options);
 
     self.connection.onJoin = function (session) {
         self.session = session;
@@ -10263,6 +10263,7 @@ Domain.prototype.join = function() {
             }
         }
    };
+
 
    self.connection.join();
 };
@@ -10313,6 +10314,8 @@ Domain.prototype.unregister = function(action) {
 };
 
 exports.Domain = Domain;
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./log.js":67,"./riffle.js":76,"./session.js":77,"./util.js":81,"when":60}],67:[function(require,module,exports){
 (function (global){
 ///////////////////////////////////////////////////////////////////////////////
@@ -12382,13 +12385,13 @@ exports.log = log;
 
 
 // Global configuration
-FABRIC_URL = "node.exis.io";
+FABRIC_URL = "wss://node.exis.io:8000/ws";
 
 // TODO: fabric url doesn't set without calling this method 
 
 exports.setDevFabric = function(url) {
   
-    FABRIC_URL = 'ws://ubuntu@ec2-52-26-83-61.us-west-2.compute.amazonaws.com:8000/ws';
+    FABRIC_URL = url;
 
     // Turn on debug logging, too
     // exports.debug = function () {

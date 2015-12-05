@@ -63,13 +63,13 @@ exports.log = log;
 
 
 // Global configuration
-FABRIC_URL = "node.exis.io";
+FABRIC_URL = "wss://node.exis.io:8000/ws";
 
 // TODO: fabric url doesn't set without calling this method 
 
 exports.setDevFabric = function(url) {
   
-    FABRIC_URL = 'ws://ec2-52-26-83-61.us-west-2.compute.amazonaws.com:8000/ws';
+    FABRIC_URL = url;
 
     // Turn on debug logging, too
     // exports.debug = function () {

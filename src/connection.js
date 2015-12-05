@@ -19,52 +19,50 @@ var log = require('./log.js');
 var riffle = require('./riffle.js');
 
 
-var Connection = function (domain) {
+var Connection = function (domain, options) {
 
    var self = this;
-   self._options = {};
-   self._domain = domain
+   self._options = options || {};
+   self._domain = domain;
 
    // Deferred factory
    //
-   // if (options && options.use_es6_promises) {
+   if (options && options.use_es6_promises) {
 
-   //    if ('Promise' in global) {
-   //       // ES6-based deferred factory
-   //       //
-   //       self._defer = function () {
-   //          var deferred = {};
+      if ('Promise' in global) {
+         // ES6-based deferred factory
+         //
+         self._defer = function () {
+            var deferred = {};
 
-   //          deferred.promise = new Promise(function (resolve, reject) {
-   //             deferred.resolve = resolve;
-   //             deferred.reject = reject;
-   //          });
+            deferred.promise = new Promise(function (resolve, reject) {
+               deferred.resolve = resolve;
+               deferred.reject = reject;
+            });
 
-   //          return deferred;
-   //       };
-   //    } else {
+            return deferred;
+         };
+      } else {
 
-   //       log.debug("Warning: ES6 promises requested, but not found! Falling back to whenjs.");
+         log.debug("Warning: ES6 promises requested, but not found! Falling back to whenjs.");
 
-   //       // whenjs-based deferred factory
-   //       //
-   //       self._defer = when.defer;
-   //    }
+         // whenjs-based deferred factory
+         //
+         self._defer = when.defer;
+      }
 
-   // } else if (options && options.use_deferred) {
+   } else if (options && options.use_deferred) {
 
-   //    // use explicit deferred factory, e.g. jQuery.Deferred or Q.defer
-   //    //
-   //    self._defer = options.use_deferred;
+      // use explicit deferred factory, e.g. jQuery.Deferred or Q.defer
+      //
+      self._defer = options.use_deferred;
 
-   // } else {
+   } else {
 
-   //    // whenjs-based deferred factory
-   //    //
-   //    self._defer = when.defer;
-   // }
-
-   self._defer = when.defer;
+      // whenjs-based deferred factory
+      //
+      self._defer = when.defer;
+   }
 
    // WAMP transport
    //
@@ -504,17 +502,18 @@ function flattenHash(hash) {
 
 // Introduction of domain object. Wraps one connection and offers multiple levels of 
 // indirection for interacting with remote domains
-var Domain = function (name) {
+var Domain = function (name, options) {
     this.domain = name;
     this.connection = null;
     this.session = null;
     this.pool = [this];
     this.joined = false;
+    this.options = options;
 }; 
 
 // Does not check the validity of the incoming or final name
 Domain.prototype.subdomain = function(name) {
-   var child = new Domain(this.domain + '.' + name)
+   var child = new Domain(this.domain + '.' + name, this.options)
 
    // If already connected instantly trigger the domain's handler
    if (this.joined) {
@@ -534,7 +533,7 @@ Domain.prototype.subdomain = function(name) {
 // Joins and leaves
 Domain.prototype.join = function() {
    var self = this;
-   self.connection = new riffle.Connection(self.domain);
+   self.connection = new riffle.Connection(self.domain, self.options);
 
     self.connection.onJoin = function (session) {
         self.session = session;
@@ -551,6 +550,7 @@ Domain.prototype.join = function() {
             }
         }
    };
+
 
    self.connection.join();
 };
