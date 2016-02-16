@@ -25,7 +25,7 @@ To use jsRiffle in your project, you need to include the script in your HTML:
 $ npm install jsRiffle
 ```
 
-And then you can import angular-wamp into your js files:
+And then you can import jsRiffle into your js files:
 
 ```js
 import jsRiffle from 'jsRiffle';
